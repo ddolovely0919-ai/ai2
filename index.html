@@ -3,124 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 숏폼 상품 생성 솔루션</title>
+    <title>AI 숏폼 비디오 기반 상품 옵션 합성 솔루션</title>
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            flex-direction: column;
-            gap: 30px;
-        }
+        body { margin: 0; padding: 0; background-color: #121212; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Pretendard', sans-serif; overflow: hidden; }
 
-        /* --- 관리자 컨트롤 패널 --- */
-        .admin-panel {
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 400px;
-            box-sizing: border-box;
-        }
-
-        .admin-panel h2 {
-            margin: 0 0 20px 0;
-            font-size: 18px;
-            color: #333;
-        }
-
-        .input-group {
-            margin-bottom: 16px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 6px;
-            font-weight: bold;
-        }
-
-        .input-group input[type="text"],
-        .input-group input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-
-        .generate-btn {
-            width: 100%;
-            background-color: #000;
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .generate-btn:hover { background-color: #333; }
-        .generate-btn:disabled { background-color: #ccc; cursor: not-allowed; }
-
-        .loading-text {
-            text-align: center;
-            font-size: 13px;
-            color: #0066ff;
-            margin-top: 12px;
-            display: none;
-            font-weight: bold;
-        }
-
-        /* --- 숏폼 플레이어 (이전과 동일, 초기엔 숨김) --- */
+        /* 숏폼 컨테이너 (비디오 비율) */
         .shortform-container {
             width: 100%;
-            max-width: 400px;
-            height: 70vh;
-            max-height: 650px;
-            background-color: #121212;
+            max-width: 360px; /* 모바일 폭 */
+            height: 90vh;
+            max-height: 640px;
+            background-color: #000;
             border-radius: 20px;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            display: none; /* 생성 전에는 숨김 */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
         }
 
-        .image-wrapper {
-            position: relative;
+        /* 1. 레이어 1: 움직이는 배경 비디오 */
+        .video-background {
             width: 100%;
             height: 100%;
-        }
-
-        .image-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* 비디오가 영역을 꽉 채움 */
             position: absolute;
             top: 0;
             left: 0;
-            transition: opacity 0.5s ease-in-out, filter 0.5s;
+            z-index: 1;
         }
 
+        /* 2. 레이어 2: AI가 생성한 합성 상품 오브제 (투명 PNG 배경) */
+        .product-overlay {
+            width: 60%; /* 비디오 내 적당한 크기 */
+            position: absolute;
+            top: 50%; /* 비디오 중앙 근처 위치 */
+            left: 50%;
+            transform: translate(-50%, -50%); /* 정확한 중앙 정렬 */
+            z-index: 2; /* 비디오 위에 위치 */
+            transition: opacity 0.3s ease; /* 전환 효과 */
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3)); /* 상품에 그림자 효과 추가 */
+        }
+
+        /* 3. 레이어 3: UI 오버레이 */
         .ui-overlay {
             position: absolute;
             bottom: 30px;
             left: 0;
             width: 100%;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            z-index: 10;
+            z-index: 3; /* 가장 위에 위치 */
         }
 
         .options-container {
@@ -129,7 +61,8 @@
             background: rgba(255, 255, 255, 0.9);
             padding: 12px 20px;
             border-radius: 30px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px);
         }
 
         .option-btn {
@@ -140,170 +73,122 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             cursor: pointer;
             transition: transform 0.2s;
+            padding: 0;
         }
 
         .option-btn.active {
             transform: scale(1.2);
             border-color: #222;
         }
+
+        /* 로딩 텍스트 (초기 로딩용) */
+        .loading-text {
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="admin-panel" id="adminPanel">
-        <h2>🛠️ 상품 옵션 AI 생성기</h2>
+    <div class="loading-text" id="loadingText">영상을 불러오는 중... ⏳</div>
+
+    <div class="shortform-container">
         
-        <div class="input-group">
-            <label for="apiKey">AI API Key (OpenAI, Stable Diffusion 등)</label>
-            <input type="text" id="apiKey" placeholder="sk-..." autocomplete="off">
-        </div>
+        <video class="video-background" id="bgVideo" autoplay loop muted playsinline>
+            <source src="https://vjs.zencdn.net/v/oceans.mp4" type="video/mp4">
+        </video>
 
-        <div class="input-group">
-            <label for="imageUpload">원본 상품 이미지 업로드</label>
-            <input type="file" id="imageUpload" accept="image/*">
-        </div>
-
-        <button class="generate-btn" id="generateBtn">AI로 옵션 자동 생성하기</button>
-        <div class="loading-text" id="loadingText">AI가 배경을 분석하고 옵션을 생성 중입니다... ⏳</div>
-    </div>
-
-    <div class="shortform-container" id="playerPanel">
-        <div class="image-wrapper">
-            <img id="mainImage" src="" alt="상품 이미지">
-        </div>
+        <img class="product-overlay" id="productOverlay" src="" alt="합성 상품" style="display: none;">
         
         <div class="ui-overlay">
-            <div class="options-container" id="buttonsContainer">
-                </div>
+            <div class="options-container">
+                <button class="option-btn active" data-product="white" style="background-color: #ffffff;"></button>
+                <button class="option-btn" data-product="orange" style="background-color: #ffaa00;"></button>
+                <button class="option-btn" data-product="blue" style="background-color: #0088ff;"></button>
+            </div>
         </div>
+
     </div>
 
     <script>
-        // DOM 요소
-        const generateBtn = document.getElementById('generateBtn');
-        const apiKeyInput = document.getElementById('apiKey');
-        const imageUpload = document.getElementById('imageUpload');
+        const bgVideo = document.getElementById('bgVideo');
+        const productOverlay = document.getElementById('productOverlay');
         const loadingText = document.getElementById('loadingText');
-        const playerPanel = document.getElementById('playerPanel');
-        const mainImage = document.getElementById('mainImage');
-        const buttonsContainer = document.getElementById('buttonsContainer');
+        const optionBtns = document.querySelectorAll('.option-btn');
 
-        let uploadedImageUrl = '';
-        let autoPlayInterval;
+        // 테스팅을 위한 투명 배경(PNG) 상품 이미지 소스
+        // (실제 서비스에서는 AI가 배경은 유지하고 오브제만 다른 색/디자인으로 생성한 PNG URL들이 들어갑니다.)
+        const productImages = {
+            'white':  'https://www.pngmart.com/files/1/Table-Lamp-PNG-File.png', // 원본 PNG
+            'orange': 'https://www.pngmart.com/files/1/Table-Lamp-PNG-File.png', // 동일 PNG에 CSS 필터 적용
+            'blue':   'https://www.pngmart.com/files/1/Table-Lamp-PNG-File.png'  // 동일 PNG에 CSS 필터 적용
+        };
+
         let currentIndex = 0;
+        let autoPlayInterval;
 
-        // 이미지 업로드 시 미리보기용 URL 생성
-        imageUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                uploadedImageUrl = URL.createObjectURL(file);
-            }
-        });
+        // 비디오 로딩 완료 시 처리
+        bgVideo.onloadeddata = function() {
+            loadingText.style.display = 'none';
+            // 첫 번째 상품 이미지 표시
+            initProduct(generatedOptions[0]);
+        };
 
-        // '생성하기' 버튼 클릭 이벤트
-        generateBtn.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-            
-            if (!apiKey) {
-                alert("API Key를 입력해주세요!");
-                return;
-            }
-            if (!uploadedImageUrl) {
-                alert("이미지를 업로드해주세요!");
-                return;
-            }
+        // 데모를 위한 CSS 필터 값 (실제 AI 생성 이미지 URL로 대체될 부분)
+        const generatedOptions = [
+            { key: 'white', filter: 'brightness(1) hue-rotate(0deg)' },     // 원본 느낌
+            { key: 'orange', filter: 'brightness(1.2) sepia(0.8) hue-rotate(10deg) saturate(3)' }, // 오렌지 느낌
+            { key: 'blue', filter: 'brightness(1) sepia(0.5) hue-rotate(180deg) saturate(2)' }   // 블루 느낌
+        ];
 
-            // UI 상태 변경 (로딩 중)
-            generateBtn.disabled = true;
-            loadingText.style.display = 'block';
-
-            /* ==================================================================
-            🚀 [실제 API 연동 시 이곳에 로직을 작성합니다]
-            ==================================================================
-            try {
-                const formData = new FormData();
-                formData.append('image', imageUpload.files[0]);
-                formData.append('prompt', 'Change the product color to blue, keep background same');
-
-                const response = await fetch('https://api.openai.com/v1/images/edits', { // 예시 URL
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${apiKey}` },
-                    body: formData
-                });
-                
-                const data = await response.json();
-                // data.data 에서 생성된 이미지 URL들을 받아와 배열로 구성합니다.
-            } catch (error) { ... }
-            ==================================================================
-            */
-
-            // 데모를 위한 가상(Mock) 로직 (3초 대기 후 완료된 것처럼 처리)
-            setTimeout(() => {
-                loadingText.style.display = 'none';
-                generateBtn.disabled = false;
-                
-                // 생성 완료 후 플레이어 보여주기
-                initPlayer();
-            }, 3000);
-        });
-
-        // 숏폼 플레이어 초기화 및 실행
-        function initPlayer() {
-            playerPanel.style.display = 'block';
-            
-            // AI가 생성해준 이미지 배열이라고 가정 (여기서는 데모를 위해 CSS Filter 값을 사용)
-            // 실제 구현 시에는 value 값에 'AI가 생성한 이미지 URL'이 들어갑니다.
-            const generatedOptions = [
-                { color: '#ffffff', filter: 'hue-rotate(0deg)' },     // 원본
-                { color: '#ff6b6b', filter: 'hue-rotate(120deg) sepia(0.3)' }, // 레드계열 느낌
-                { color: '#4ecdc4', filter: 'hue-rotate(240deg)' },   // 블루/그린 느낌
-                { color: '#ffe66d', filter: 'hue-rotate(60deg) saturate(1.5)' } // 옐로우 느낌
-            ];
-
-            buttonsContainer.innerHTML = ''; // 버튼 초기화
-            mainImage.src = uploadedImageUrl;
-
-            // 하단 스와치 버튼 동적 생성
-            generatedOptions.forEach((opt, index) => {
-                const btn = document.createElement('button');
-                btn.className = `option-btn ${index === 0 ? 'active' : ''}`;
-                btn.style.backgroundColor = opt.color;
-                
-                btn.addEventListener('click', () => {
-                    clearInterval(autoPlayInterval); // 클릭 시 자동재생 정지
-                    changeImage(index, generatedOptions);
-                });
-                buttonsContainer.appendChild(btn);
-            });
-
-            // 자동 재생 시작
-            currentIndex = 0;
-            clearInterval(autoPlayInterval);
-            
-            autoPlayInterval = setInterval(() => {
-                currentIndex = (currentIndex + 1) % generatedOptions.length;
-                changeImage(currentIndex, generatedOptions);
-            }, 2500);
+        function initProduct(option) {
+            productOverlay.src = productImages[option.key];
+            productOverlay.style.filter = option.filter;
+            productOverlay.style.display = 'block';
+            startAutoPlay();
         }
 
-        // 이미지 전환 함수
-        function changeImage(index, options) {
-            // 페이드 아웃
-            mainImage.style.opacity = 0.5;
+        // 상품 오브제만 교체하는 함수
+        function changeProduct(index) {
+            const option = generatedOptions[index];
+
+            // 페이드 아웃 효과
+            productOverlay.style.opacity = 0;
 
             setTimeout(() => {
-                // 실제 서비스에서는 mainImage.src = options[index].imageUrl; 로 교체합니다.
-                // 현재는 데모이므로 업로드한 이미지에 CSS 필터를 씌워 색이 변한 것처럼 연출합니다.
-                mainImage.style.filter = options[index].filter;
-                mainImage.style.opacity = 1;
-            }, 200);
+                // 상품 오브제 이미지 소스 및 필터 교체 (배경 비디오는 계속 재생 중)
+                productOverlay.src = productImages[option.key];
+                productOverlay.style.filter = option.filter;
+                // 페이드 인 효과
+                productOverlay.style.opacity = 1;
+            }, 150); // 전환 속도
 
             // 버튼 UI 업데이트
-            const btns = document.querySelectorAll('.option-btn');
-            btns.forEach(b => b.classList.remove('active'));
-            btns[index].classList.add('active');
+            optionBtns.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.option-btn')[index].classList.add('active');
             
             currentIndex = index;
+        }
+
+        // 수동 클릭 이벤트
+        optionBtns.forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                clearInterval(autoPlayInterval); // 클릭 시 자동재생 중지
+                changeProduct(index);
+            });
+        });
+
+        // 영상처럼 루핑되는 자동 재생 기능
+        function startAutoPlay() {
+            autoPlayInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % generatedOptions.length;
+                changeProduct(currentIndex);
+            }, 3000); // 3초마다 상품 교체
         }
     </script>
 </body>
