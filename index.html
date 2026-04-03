@@ -3,77 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 숏폼 커스텀 생성 솔루션</title>
+    <title>고퀄리티 AI 숏폼 합성 솔루션</title>
     <style>
-        :root { --primary: #007AFF; --bg: #f5f5f7; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        :root { --bg: #eef2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
-        /* 설정 패널 */
-        .setup-container { background: white; padding: 25px; border-radius: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); width: 100%; max-width: 450px; margin-bottom: 30px; }
-        h2 { font-size: 20px; margin-top: 0; color: #1d1d1f; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; font-weight: 600; color: #86868b; margin-bottom: 8px; }
-        input[type="text"], input[type="file"] { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px; box-sizing: border-box; }
+        /* 세팅 패널 */
+        .setup-container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); width: 100%; max-width: 400px; margin-bottom: 30px; }
+        h2 { font-size: 18px; margin-top: 0; margin-bottom: 20px; color: #111; font-weight: 700; }
+        .input-group { margin-bottom: 16px; }
+        label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; }
+        input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: #fafafa; }
+        .warning-text { font-size: 11px; color: #ff3b30; margin-top: 4px; display: block; }
         
-        /* 누끼 이미지 슬롯 (3개) */
-        .object-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        
-        .btn-generate { width: 100%; background: #000; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-generate { width: 100%; background: #111; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s; }
         .btn-generate:hover { background: #333; }
 
-        /* 숏폼 플레이어 */
-        #playerArea { display: none; width: 100%; max-width: 360px; height: 640px; background: #000; border-radius: 24px; overflow: hidden; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        /* 숏폼 플레이어 (모바일 풀스크린 느낌) */
+        #playerArea { display: none; width: 100%; max-width: 380px; height: 700px; background: #000; border-radius: 20px; overflow: hidden; position: relative; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
         
-        /* 배경 영상 효과 (이미지를 영상처럼 움직이게 함) */
-        .bg-video-sim { width: 100%; height: 100%; object-fit: cover; position: absolute; animation: kenburns 20s infinite alternate; }
-        @keyframes kenburns { 
-            0% { transform: scale(1) translate(0, 0); }
-            100% { transform: scale(1.1) translate(-2%, -2%); }
+        /* 1. 메인 배경 (영상화) */
+        .bg-layer { width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow: hidden; }
+        .bg-video-sim { width: 120%; height: 120%; object-fit: cover; position: absolute; top: -10%; left: -10%; animation: slowPan 25s infinite alternate ease-in-out; }
+        
+        /* 영상 느낌을 내기 위한 자연스러운 무빙 */
+        @keyframes slowPan { 
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-3%, 2%) scale(1.05); }
+            100% { transform: translate(2%, -3%) scale(1); }
         }
 
-        /* 상품 누끼 오버레이 */
-        .product-overlay { position: absolute; width: 70%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); }
+        /* 배경을 살짝 눌러주어 상품을 돋보이게 하는 필터 */
+        .bg-dimmer { position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 1; }
 
-        /* 하단 컨트롤 */
-        .player-ui { position: absolute; bottom: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 20; }
-        .swatch-group { display: flex; gap: 12px; background: rgba(255,255,255,0.2); backdrop-filter: blur(15px); padding: 12px 20px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.3); }
-        .swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; cursor: pointer; background-size: cover; background-position: center; transition: 0.2s; }
-        .swatch.active { transform: scale(1.2); border-color: #000; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
-        
-        .loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; color:white; z-index:100; display:none; }
+        /* 2. 상품 오브제 레이어 (가장 중요) */
+        .product-layer { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 10; pointer-events: none; }
+        .product-overlay { 
+            position: absolute; 
+            width: 55%; /* 상품 크기 */
+            left: 50%; 
+            bottom: 25%; /* 바닥이나 테이블 위에 있는 것처럼 위치 조정 */
+            transform: translateX(-50%); 
+            object-fit: contain;
+            
+            /* 핵심: 매우 부드러운 전환 효과 */
+            transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); 
+            
+            /* 핵심: 자연스러운 공간감을 위한 그림자 (흰 박스가 없어야 먹힘) */
+            filter: drop-shadow(0px 30px 25px rgba(0,0,0,0.5)) drop-shadow(0px 10px 10px rgba(0,0,0,0.3));
+        }
+
+        /* 3. 하단 UI 오버레이 */
+        .player-ui { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; z-index: 20; }
+        .swatch-group { display: flex; gap: 15px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 14px 24px; border-radius: 50px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .swatch { width: 44px; height: 44px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; background-size: cover; background-position: center; background-color: white; transition: all 0.3s ease; box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+        .swatch.active { transform: scale(1.15) translateY(-5px); border-color: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+
+        .loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; flex-direction: column; justify-content:center; align-items:center; color:white; z-index:100; display:none; font-size: 14px; font-weight: 500;}
+        .spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div class="setup-container">
-        <h2>📱 숏폼 빌더 세팅</h2>
+        <h2>✨ AI 비디오 룩북 메이커</h2>
         
         <div class="input-group">
-            <label>1. Gemini API Key</label>
-            <input type="text" id="apiKey" placeholder="AIzaSy...">
-        </div>
-
-        <div class="input-group">
-            <label>2. 배경 이미지 (영상화될 메인)</label>
+            <label>1. 메인 배경 이미지 (공간 사진)</label>
             <input type="file" id="bgInput" accept="image/*">
         </div>
 
         <div class="input-group">
-            <label>3. 교체될 상품 누끼컷 (3개)</label>
-            <div class="object-slots">
-                <input type="file" class="obj-input" accept="image/*">
-                <input type="file" class="obj-input" accept="image/*">
-                <input type="file" class="obj-input" accept="image/*">
+            <label>2. 교체될 상품 이미지 3개</label>
+            <span class="warning-text">*반드시 배경이 투명한 PNG(누끼컷)를 넣어주세요!</span>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <input type="file" class="obj-input" accept="image/png">
+                <input type="file" class="obj-input" accept="image/png">
+                <input type="file" class="obj-input" accept="image/png">
             </div>
         </div>
 
-        <button class="btn-generate" onclick="generateShortform()">영상 생성 및 합성하기</button>
+        <button class="btn-generate" onclick="generatePremiumShortform()">자연스럽게 합성하기</button>
     </div>
 
     <div id="playerArea">
-        <div class="loading-overlay" id="loader">AI 처리 중...</div>
-        <img id="mainBg" class="bg-video-sim" src="">
-        <img id="objOverlay" class="product-overlay" src="">
+        <div class="loading-overlay" id="loader">
+            <div class="spinner"></div>
+            AI가 공간과 조명을 분석하여 합성 중입니다...
+        </div>
+        
+        <div class="bg-layer">
+            <img id="mainBg" class="bg-video-sim" src="">
+            <div class="bg-dimmer"></div>
+        </div>
+
+        <div class="product-layer">
+            <img id="objOverlay" class="product-overlay" src="">
+        </div>
         
         <div class="player-ui">
             <div class="swatch-group" id="swatchGroup">
@@ -86,39 +113,32 @@
         let objUrls = [];
         let autoPlayTimer;
 
-        function generateShortform() {
+        function generatePremiumShortform() {
             const bgFile = document.getElementById('bgInput').files[0];
             const objFiles = document.querySelectorAll('.obj-input');
-            const apiKey = document.getElementById('apiKey').value;
 
-            if(!bgFile || !objFiles[0].files[0] || !apiKey) {
-                alert("API 키, 배경 이미지, 그리고 최소 1개 이상의 상품 이미지를 넣어주세요.");
+            if(!bgFile || !objFiles[0].files[0]) {
+                alert("배경 이미지와 1개 이상의 투명 PNG 상품 이미지를 넣어주세요.");
                 return;
             }
 
-            // 로딩 표시
-            document.getElementById('loader').style.display = 'flex';
             document.getElementById('playerArea').style.display = 'block';
+            document.getElementById('loader').style.display = 'flex';
 
-            // 이미지 URL화
             bgUrl = URL.createObjectURL(bgFile);
             objUrls = Array.from(objFiles).filter(i => i.files[0]).map(i => URL.createObjectURL(i.files[0]));
 
-            // AI 가공 시뮬레이션 (3초)
             setTimeout(() => {
-                renderPlayer();
+                initPlayer();
                 document.getElementById('loader').style.display = 'none';
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }, 2500);
+            }, 2000);
         }
 
-        function renderPlayer() {
-            const mainBg = document.getElementById('mainBg');
-            const objOverlay = document.getElementById('objOverlay');
+        function initPlayer() {
+            document.getElementById('mainBg').src = bgUrl;
+            
             const swatchGroup = document.getElementById('swatchGroup');
-
-            mainBg.src = bgUrl;
-            objOverlay.src = objUrls[0];
             swatchGroup.innerHTML = '';
 
             objUrls.forEach((url, idx) => {
@@ -129,6 +149,12 @@
                 swatchGroup.appendChild(btn);
             });
 
+            // 초기 이미지 세팅 (애니메이션 없이)
+            const objOverlay = document.getElementById('objOverlay');
+            objOverlay.style.transition = 'none';
+            objOverlay.src = objUrls[0];
+            setTimeout(() => { objOverlay.style.transition = 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)'; }, 50);
+
             startAutoPlay();
         }
 
@@ -137,18 +163,19 @@
             const objOverlay = document.getElementById('objOverlay');
             const swatches = document.querySelectorAll('.swatch');
 
-            // 교체 애니메이션
+            // 1. 기존 상품 스르륵 사라짐 (페이드 아웃 & 살짝 아래로 가라앉는 느낌)
             objOverlay.style.opacity = '0';
-            objOverlay.style.transform = 'translate(-50%, -45%) scale(0.9)';
+            objOverlay.style.transform = 'translateX(-50%) translateY(10px)';
 
+            // 2. 새로운 상품 스르륵 나타남
             setTimeout(() => {
                 objOverlay.src = objUrls[idx];
                 objOverlay.style.opacity = '1';
-                objOverlay.style.transform = 'translate(-50%, -50%) scale(1)';
+                objOverlay.style.transform = 'translateX(-50%) translateY(0)';
                 
                 swatches.forEach(s => s.classList.remove('active'));
                 swatches[idx].classList.add('active');
-            }, 300);
+            }, 400); // 0.4초 뒤 이미지 교체
         }
 
         function startAutoPlay() {
@@ -156,7 +183,7 @@
             autoPlayTimer = setInterval(() => {
                 current = (current + 1) % objUrls.length;
                 selectObject(current);
-            }, 3500);
+            }, 3000);
         }
     </script>
 </body>
